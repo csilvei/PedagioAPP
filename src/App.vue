@@ -17,21 +17,16 @@
         <button class="btn"  id="env" v-show='exibecmd' v-on:click="envia">Enviar</button>
         <div id="tbRoad" v-show="exibeRoad"> 
             <table summary="Listas de veículos podem ser na pista ou que devem pagar">
-                <thead>
-                    <tr>
-                        <th colspan="3">Lista de Veículos na Pista:</th>
-                    </tr>
-                </thead>
                 <tbody>
                     <tr>
                         <td>Placa</td>
                         <td>Tipo</td>
                         <td>Entrou</td>
                     </tr>
-                    <tr>
-                        <td>$500</td>
-                        <td>$640</td>
-                        <td>$650</td>
+                    <tr id='veiculos' v-for="item in listaRoad">
+                        <td>{{item.placa}}</td>
+                        <td>{{item.tipo == 0 ? 'Carro' : 'Caminhão'}}</td>
+                        <td>{{item.in}}</td>
                     </tr>
                 </tbody>
             </table>
@@ -39,11 +34,6 @@
         </div>
         <div id="tbOut" v-show="exibeOut"> 
             <table summary="Listas de veículos podem ser na pista ou que devem pagar">
-                <thead>
-                    <tr>
-                        <th colspan="5">Lista de Boletos Gerados:</th>
-                    </tr>
-                </thead>
                 <tbody>
                     <tr>
                         <td>Placa</td>
@@ -52,16 +42,19 @@
                         <td>Saiu</td>
                         <td>Valor</td>
                     </tr>
-                    <tr>
-                        <td>$500</td>
-                        <td>$640</td>
-                        <td>$650</td>
-                        <td>$650</td>
-                        <td>$650</td>
+                    <tr id='cobranca' v-for="cob in listaOut">
+                        <td>{{cob.placa}}</td>
+                        <td>{{cob.tipo == 0 ? 'Carro' : 'Caminhão'}}</td>
+                        <td>{{cob.in}}</td>
+                        <td>{{cob.out}}</td>
+                        <td>R$ {{cob.val}}</td>
                     </tr>
                 </tbody>
             </table>
-            <button  class="btn"  id="endB" v-on:click="volta">{{label}}</button>
+            <button class="btn"  id="returnb" v-show="reinicia == false" v-on:click="volta">Voltar</button>
+        </div>
+        <div id='reinicia' v-show="reinicia">
+            <button class="btn"  id="reibnb" v-on:click="reiniciar">Reiniciar</button>
         </div>
     </div>
 </template>
@@ -76,8 +69,10 @@
                 msg : 'Bem Vindo ao Pedagio',
                 comando: '',
                 label: '',
-                listaRoad : {},
-                listaOut : {},
+                listaRoad : [],
+                listaOut : [],
+                auxMsg: '',
+                reinicia : false,
                 valores : [
                             {in:'POA',out:'GRA',val:30},
                             {in:'POA',out:'GLO',val:54},
@@ -105,59 +100,198 @@
         methods: {
             /* verifica se foi enviada um comando valido */
             verificaSintaxe(){
-                var auxMsg = [];
                 if(!this.comando.length){
                     this.msg = "É necessário Informar um comando";
                     return false;
-                }else{
-                    auxMsg = this.comando.split(";");
-                    if(auxMsg.length == 1 && ((auxMsg[0].toLowerCase() != 'vin') || (auxMsg[0].toLowerCase() != 'ped') 
-                    || (auxMsg[0].toLowerCase() != 'end'))){
+                }
+                else if(this.comando.toLowerCase() == 'vin' || this.comando.toLowerCase() == 'ped' || this.comando.toLowerCase() == 'end'){
+                   return true;
+                }
+                else{
+                    this.auxMsg = this.comando.split(";");
+                    
+                    if(this.auxMsg.length == 1 && ((this.auxMsg[0].toLowerCase() != 'vin') || (this.auxMsg[0].toLowerCase() != 'ped') 
+                    || (this.auxMsg[0].toLowerCase() != 'end'))){
                         this.msg = "Comando Inválido";
                         return false;
                     }
 
-                    if(auxMsg.length == 2){
+                    if(this.auxMsg.length == 2){
                         this.msg = "Comando Inválido";
                         return false;
                     }
+
+                    if(this.auxMsg.length == 3 && this.auxMsg[0].toLowerCase() != 'out'){
+                        this.msg = 'Dados inválidos, verifique e tente novamente';
+                        return false;
+                    }
+
                     /* se for menor que 4 parametros e nao for out */
-                    if(auxMsg.length < 4 && auxMsg.length >= 3 && auxMsg[0].toLowerCase() == 'in'){
+                    if(this.auxMsg.length > 3 && this.auxMsg[0].toLowerCase() == 'out'){
                         this.msg = 'Dados inválidos, verifique e tente novamente';
                         return false;
                     }
                 }
                 return true;
             },
-            /* verifica o tipo de envio e direciona para     
-
+             reiniciar(){
+                this.exibeOut = false,
+                this.exibeRoad = false,
+                this.exibecmd = true,
+                this.reinicia = false,
+                this.msg = 'Bem Vindo ao Pedagio',
+                this.comando = '',
+                this.label = '',
+                this.listaRoad = [],
+                this.listaOut = []
+             }, 
             /*manipula a string enviada */
             envia(){
                 if(this.verificaSintaxe()){ 
-                    switch(auxMsg[0].toLowerCase){
-                        case 'in':
+                    /* se for uma string valida */
+                    let aux = '';
+                    this.auxMsg.length;
+                    if(this.auxMsg.length == 0){
+                       aux = this.comando; 
+                    }else{
+                       aux = this.auxMsg[0]; 
+                    }
 
+                    switch(aux.toLowerCase()){
+                        case 'in':
+                            let cidades = ['poa','gra','sta','glo','oso'];
+                            let existe = false;
+                            let isNumber = parseInt(this.auxMsg[3]);
+                            for(var i in cidades){
+                                if(cidades[i] == this.auxMsg[1].toLowerCase()){
+                                    existe = true;
+                                }
+                            }
+
+                            if(existe == false){
+                                   this.msg = 'Cidade Informada Inválida';
+                                   this.auxMsg = '';
+                                   break;
+                            }
+                            
+                            if(this.auxMsg[2].length > 8){
+                                this.msg = 'Tamanho maximo para placa e de 8 caracteres';
+                                this.auxMsg = '';
+                                break;
+
+                            }
+                            if(isNaN(isNumber)){
+                                this.msg = 'O numero de eixos deve ser informado em formato numérico';
+                                this.auxMsg = '';
+                                break;
+                            }else{
+                                if(parseInt(this.auxMsg[3]) > 0){
+                                    if(parseInt(this.auxMsg[3]) < 2 || parseInt(this.auxMsg[3]) > 8){
+                                        this.msg = 'Valores aceitos para eixos somente 0 ou entre 2 e 8';
+                                        this.auxMsg = '';
+                                        break;
+                                    }
+                                }
+                            }
+
+                            let achou = false;
+                            for(var i in this.listaRoad){
+                                if(this.listaRoad[i].placa === this.auxMsg[2]){
+                                    achou = true;
+                                }
+                            }   
+                            if(achou){
+                                this.msg = 'Veículo já esta na Rodovia';
+                                this.auxMsg = '';
+                            }else{
+                                this.listaRoad.push({placa:this.auxMsg[2].toLowerCase(),tipo:this.auxMsg[3],in:this.auxMsg[1].toLowerCase()});
+                                this.msg = 'Véiculo Entrou na Rodovia';
+                                this.comando = '';
+                                this.auxMsg = '';
+                            }
+                            
                         break;
                         case 'out':
-                        
+
+                            for(var i in cidades){
+                                if(cidades[i] == this.auxMsg[1].toLowerCase()){
+                                    existe = true;
+                                }
+                            }
+
+                            if(existe == false){
+                                   this.msg = 'Cidade Informada Inválida';
+                                   this.auxMsg = '';
+                                   break;
+                            }
+                            
+                            if(this.auxMsg[2].length > 8){
+                                this.msg = 'Tamanho maximo para placa e de 8 caracteres';
+                                this.auxMsg = '';
+                                break;
+                            }
+                            let auxCar;
+                            for(var i in this.listaRoad){
+                                if(this.listaRoad[i].placa == this.auxMsg[2].toLowerCase()){
+                                    auxCar = i;
+                                }
+                            }
+
+                            if(auxCar){
+                                 
+                                 let auxValores;
+                                 for(var i in Object.keys(this.valores)){
+                                     if(this.valores[i].in.toLowerCase() == this.listaRoad[auxCar].in && this.auxMsg[1].toLowerCase() == this.valores[i].out.toLowerCase()){
+                                         auxValores = parseInt(this.valores[i].val);
+                                     }
+                                 }
+
+                                 if(this.auxMsg[1].toLowerCase() == this.listaRoad[auxCar].in){
+                                     this.msg = 'Veículo entrou e saiu na mesma cidade não será cobrado...';
+                                     this.auxMsg = '';  
+                                 }else{
+                                    auxValores = (auxValores * 0.20) + (parseInt(this.listaRoad[auxCar].tipo) * 0.05);
+                                    this.listaOut.push({placa:this.listaRoad[auxCar].placa,tipo:this.listaRoad[auxCar].tipo,in:this.listaRoad[auxCar].in,out:this.auxMsg[1],val:auxValores});
+                                    this.listaRoad.splice(auxCar,1);
+                                    this.msg = 'Veículo saiu da Rodovia';
+                                    this.auxMsg = '';   
+                                    this.comando = '';
+                                 }
+                            }
+                            else{
+                                this.msg = 'Não Encontramos nenhum veículo na pista com esta placa'; 
+                                this.auxMsg = '';
+                            }
+
                         break;
                         case 'vin':
-
+                            this.exibeRoad = true;
+                            this.exibecmd = false;
+                            this.msg =  Object.keys(this.listaRoad).length == 0 ? '0 Veículo (s) Trafegando...' : Object.keys(this.listaRoad).length +  ' Veículo (s) Trafegando...';
+                            this.auxMsg = '';
                         break;
                         case 'ped':
-
+                            this.exibeOut = true,
+                            this.exibecmd = false;
+                            this.msg =  Object.keys(this.listaOut).length == 0 ? '0 Boleto (s) Gerados...' : Object.keys(this.listaOut).length +  ' Boleto (s) Gerados...';
+                            this.auxMsg = '';
                         break;
                         case 'end':
-
+                            this.exibecmd = false;
+                            this.exibeOut = true;
+                            this.reinicia = true;
+                            this.msg='Sistema Encerrado...';
                         break;
                         default:
                             this.msg = "Comando deve estar entre IN,OUT,VIN,PED,END";
+                            this.auxMsg = '';
                         break;
                     }
                 }
+                this.auxMsg = '';
             },
 
-            /*encerra a operação */
+            /*volta a tela inicial */
             volta(){
                 this.exibeOut = false,
                 this.exibeRoad = false,
